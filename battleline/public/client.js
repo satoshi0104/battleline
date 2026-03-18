@@ -49,7 +49,9 @@ startBtn.addEventListener("click", () => {
 ------------------------- */
 function connect() {
   const loc = window.location;
-  const url = `ws://${loc.hostname}:${loc.port}`;
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const url = `${protocol}//${location.host}`;
+  /*const url = `ws://${loc.hostname}:${loc.port}`;*/
   ws = new WebSocket(url);
 
   ws.onopen = () => {
