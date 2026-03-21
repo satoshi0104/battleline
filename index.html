@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Battle Line</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #222;
+      color: #eee;
+    }
+
+    #nameInputArea {
+      padding: 20px;
+      text-align: center;
+    }
+
+    #nameInputArea input {
+      padding: 8px;
+      font-size: 16px;
+      width: 200px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    #nameInputArea button {
+      padding: 8px 16px;
+      font-size: 16px;
+      margin-left: 10px;
+      border-radius: 6px;
+      border: none;
+      background: #555;
+      color: #fff;
+    }
+
+    #roleButtons {
+      margin: 10px 0;
+    }
+
+    .roleBtn {
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 2px solid #666;
+      background: #444;
+      color: #fff;
+      font-size: 16px;
+      transition: 0.2s;
+    }
+
+    /* 選択中（共通） */
+    .roleBtn.active {
+      transform: scale(1.1);
+      border: 2px solid #fff;
+    }
+
+    /* 先攻（緑） */
+    .roleBtn[data-role="P1"].active {
+      background: #4caf50;
+    }
+
+    /* 後攻（赤） */
+    .roleBtn[data-role="P2"].active {
+      background: #f44336;
+    }
+
+    /* 観戦（グレー） */
+    .roleBtn[data-role="spectator"].active {
+      background: #777;
+    }
+
+
+    #top {
+      padding: 8px;
+      background: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #flags {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 8px;
+    }
+
+    .flag {
+      border: 2px solid #555;
+      margin: 2px;
+      padding: 2px;
+      width: 122px;
+      min-height: 148px;
+      border-radius: 8px;
+      background: #2d2d2d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .flag.wP1 {
+      border-color: #4caf50;
+    }
+
+    .flag.wP2 {
+      border-color: #f44336;
+    }
+
+    .pile {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin: 2px 0;
+      min-height: 50px;
+    }
+
+    .card {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 34px;
+      height: 48px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #000;
+      box-shadow: 0 0 4px #000;
+    }
+
+    .card.selected {
+      outline: 3px solid #fff;
+    }
+
+    .last {
+      outline: 3px solid cyan;
+    }
+
+    #hand {
+      padding: 10px;
+      border-top: 2px solid #444;
+      background: #1a1a1a;
+      min-height: 70px;
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      background: #555;
+      color: #fff;
+    }
+
+    button:disabled {
+      background: #333;
+      color: #777;
+    }
+
+    .flag button {
+      margin-top: 6px;
+      width: 90%;
+    }
+
+    @media (orientation: landscape) {
+      #flags {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start; /* ←追加 */
+        -webkit-overflow-scrolling: touch; /* ★スマホでヌルヌルスクロール */
+      }
+
+      .flag {
+        flex: 0 0 auto; /* ★これが超重要（縮まなくなる） */
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 名前入力エリア -->
+<div id="nameInputArea">
+  <h3>プレイヤー名を入力してください</h3>
+
+  <input id="playerNameInput" type="text" placeholder="名前"><br><br>
+
+  <div id="roleButtons">
+    <button class="roleBtn" data-role="P1">先攻</button>
+    <button class="roleBtn" data-role="P2">後攻</button>
+    <button class="roleBtn" data-role="spectator">観戦</button>
+  </div>
+
+  <button id="startBtn">開始</button>
+</div>
+
+  <!-- ゲームエリア -->
+  <div id="gameArea" style="display:none;">
+    <div id="top">
+      <div id="status">接続中...</div>
+      <div>
+        <span id="deckInfo">山札: ?</span>
+        <button id="undoBtn">一手戻す</button>
+        <button id="resetBtn">リセット</button>
+      </div>
+    </div>
+
+    <div id="flags"></div>
+    <div id="hand"></div>
+  </div>
+
+  <script src="client.js"></script>
+</body>
+</html>
