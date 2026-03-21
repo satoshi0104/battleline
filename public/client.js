@@ -38,6 +38,7 @@ startBtn.addEventListener("click", () => {
   ws.send(JSON.stringify({
     type: "setName",
     name: myName
+    role: document.getElementById("roleSelect").value
   }));
 
   nameInputArea.style.display = "none";
