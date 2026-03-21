@@ -5,6 +5,20 @@ let myName = "";
 let selectedCardId = null; 
 let winnerPopupShown = false;
 
+let selectedRole = "spectator";
+
+window.addEventListener("load", () => {
+  const roleBtns = document.querySelectorAll(".roleBtn");
+
+  roleBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      roleBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedRole = btn.dataset.role;
+    });
+  });
+});
+
 const nameInputArea = document.getElementById("nameInputArea");
 const gameArea = document.getElementById("gameArea");
 const startBtn = document.getElementById("startBtn");
@@ -38,7 +52,7 @@ startBtn.addEventListener("click", () => {
   ws.send(JSON.stringify({
     type: "setName",
     name: myName,
-    role: document.getElementById("roleSelect").value
+    role: selectedRole
   }));
 
   nameInputArea.style.display = "none";

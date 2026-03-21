@@ -36,6 +36,24 @@
       color: #fff;
     }
 
+    #roleButtons {
+      margin: 10px 0;
+    }
+
+    .roleBtn {
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      background: #444;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    .roleBtn.active {
+      background: #4caf50;
+    }
+
     #top {
       padding: 8px;
       background: #333;
@@ -154,11 +172,11 @@
 
   <input id="playerNameInput" type="text" placeholder="名前"><br><br>
 
-  <select id="roleSelect"><br>
-    <option value="P1">先攻</option>
-    <option value="P2">後攻</option>
-    <option value="spectator">観戦者</option>
-  </select><br><br>
+  <div id="roleButtons">
+    <button class="roleBtn" data-role="P1">先攻</button>
+    <button class="roleBtn" data-role="P2">後攻</button>
+    <button class="roleBtn" data-role="spectator">観戦</button>
+  </div>
 
   <button id="startBtn">開始</button>
 </div>
