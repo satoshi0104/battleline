@@ -44,15 +44,34 @@
       padding: 10px 16px;
       margin: 5px;
       border-radius: 8px;
-      border: none;
+      border: 2px solid #666;
       background: #444;
       color: #fff;
       font-size: 16px;
+      transition: 0.2s;
     }
 
+    /* 選択中（共通） */
     .roleBtn.active {
+      transform: scale(1.1);
+      border: 2px solid #fff;
+    }
+
+    /* 先攻（緑） */
+    .roleBtn[data-role="P1"].active {
       background: #4caf50;
     }
+
+    /* 後攻（赤） */
+    .roleBtn[data-role="P2"].active {
+      background: #f44336;
+    }
+
+    /* 観戦（グレー） */
+    .roleBtn[data-role="spectator"].active {
+      background: #777;
+    }
+
 
     #top {
       padding: 8px;
