@@ -417,6 +417,8 @@ if (data.type === 'reset') {
     ------------------------- */
     if (data.type === 'playCard') {
        // ★追加（この1行が命）
+       
+      if (gameState.winner) return;
       history.push(cloneState(gameState));
       
       const { playerId, cardId, flagId } = data;
@@ -476,6 +478,7 @@ if (data.type === 'reset') {
        証明（強化版）
     ------------------------- */
     if (data.type === 'prove') {
+      if (gameState.winner) return;
       const { playerId, flagId } = data;
 
       const flag = gameState.flags.find(f => f.id === flagId);
