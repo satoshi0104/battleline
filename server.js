@@ -10,6 +10,23 @@ app.use(express.static("public"));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+function heartbeat() {
+  this.isAlive = true;
+}
+
+// ★ここに追加（connectionの外！）
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log("タイムアウト切断");
+      return ws.terminate();
+    }
+
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 let history = [];
@@ -288,6 +305,8 @@ function tryStartGame() {
    接続処理
 ------------------------- */
 wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', heartbeat);
   let role;
 
   if (!clients.find(c => c.role === "P1")) role = "P1";
