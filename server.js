@@ -307,11 +307,8 @@ function tryStartGame() {
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', heartbeat);
-  let role;
 
-  if (!clients.find(c => c.role === "P1")) role = "P1";
-  else if (!clients.find(c => c.role === "P2")) role = "P2";
-  else role = "spectator";
+  let role = "spectator"; // 最初は仮
 
   clients.push({ ws, role, name: "" });
 
@@ -327,6 +324,39 @@ wss.on('connection', (ws) => {
 
     const sender = clients.find(c => c.ws === ws);
     if (!sender) return;
+    // ★ここに入れる！！！
+  if (data.type === "setName") {
+    sender.name = data.name;
+
+    if (data.role === "P1" || data.role === "P2") {
+      if (clients.some(c => c.role === data.role)) {
+        ws.send(JSON.stringify({
+          type: "error",
+          message: "その席は埋まってます"
+        }));
+        return;
+      }
+      sender.role = data.role;
+    } else {
+      sender.role = "spectator";
+    }
+
+    ws.send(JSON.stringify({
+      type: 'youAre',
+      playerId: sender.role
+    }));
+
+    if (sender.role === "P1" || sender.role === "P2") {
+      if (gameState) {
+        gameState.playerNames[sender.role] = sender.name;
+        broadcastState();
+      } else {
+        tryStartGame();
+      }
+    }
+
+    return;
+  }
     
   /* -------------------------
        一手戻す
