@@ -37,7 +37,7 @@ startBtn.addEventListener("click", () => {
 
   ws.send(JSON.stringify({
     type: "setName",
-    name: myName
+    name: myName,
     role: document.getElementById("roleSelect").value
   }));
 
