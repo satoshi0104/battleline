@@ -1,76 +1,34 @@
 let ws;
-let me = null;       // "P1" | "P2" | "spectator"
+let me = null;
 let state = null;
 let myName = "";
-let selectedCardId = null; 
-let winnerPopupShown = false;
-
+let selectedCardId = null;
 let selectedRole = "spectator";
 
-window.addEventListener("load", () => {
-  const roleBtns = document.querySelectorAll(".roleBtn");
-
-  roleBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      roleBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedRole = btn.dataset.role;
-    });
-  });
-});
-
-const nameInputArea = document.getElementById("nameInputArea");
-const gameArea = document.getElementById("gameArea");
-const startBtn = document.getElementById("startBtn");
-const nameInput = document.getElementById("playerNameInput");
-
-const statusEl = document.getElementById('status');
-const flagsEl = document.getElementById('flags');
-const handEl = document.getElementById('hand');
-const deckInfoEl = document.getElementById('deckInfo');
-const undoBtn = document.getElementById("undoBtn");
-const resetBtn = document.getElementById("resetBtn");
+let prevPlayer = null;
+let reconnecting = false;
 
 /* -------------------------
-   ページロード時に接続
-------------------------- */
-window.addEventListener("load", () => {
-  connect();
-});
-
-/* -------------------------
-   名前送信
-------------------------- */
-startBtn.addEventListener("click", () => {
-  const name = nameInput.value.trim();
-  if (!name) {
-    alert("名前を入力してください");
-    return;
-  }
-  myName = name;
-
-  ws.send(JSON.stringify({
-    type: "setName",
-    name: myName,
-    role: selectedRole
-  }));
-
-  nameInputArea.style.display = "none";
-  gameArea.style.display = "block";
-});
-
-/* -------------------------
-   WebSocket 接続
+   接続
 ------------------------- */
 function connect() {
-  const loc = window.location;
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const url = `${protocol}//${location.host}`;
-  /*const url = `ws://${loc.hostname}:${loc.port}`;*/
+
   ws = new WebSocket(url);
 
   ws.onopen = () => {
-    statusEl.textContent = "サーバーに接続しました。名前を入力してください。";
+    reconnecting = false;
+    statusEl.textContent = "接続しました";
+
+    // ★ 再接続時に自動復帰
+    if (myName) {
+      ws.send(JSON.stringify({
+        type: "setName",
+        name: myName,
+        role: selectedRole
+      }));
+    }
   };
 
   ws.onmessage = (ev) => {
@@ -80,9 +38,9 @@ function connect() {
       me = msg.playerId;
 
       if (me === "spectator") {
-        statusEl.textContent = "観戦者として接続しました";
+        statusEl.textContent = "観戦者として接続";
       } else {
-        statusEl.textContent = `あなたは ${me} です（名前入力待ち）`;
+        statusEl.textContent = `あなたは ${me}`;
       }
     }
 
@@ -97,12 +55,84 @@ function connect() {
   };
 
   ws.onclose = () => {
-    statusEl.textContent = '切断されました。';
+    if (!reconnecting) {
+      reconnecting = true;
+      statusEl.textContent = "切断されました…再接続中";
+
+      setTimeout(() => {
+        connect();
+      }, 1000);
+    }
+  };
+
+  ws.onerror = () => {
+    ws.close();
   };
 }
 
 /* -------------------------
-   カード色
+   初期化
+------------------------- */
+window.addEventListener("load", () => {
+  connect();
+
+  const roleBtns = document.querySelectorAll(".roleBtn");
+  roleBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      roleBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedRole = btn.dataset.role;
+    });
+  });
+});
+
+/* -------------------------
+   DOM
+------------------------- */
+const nameInputArea = document.getElementById("nameInputArea");
+const gameArea = document.getElementById("gameArea");
+const startBtn = document.getElementById("startBtn");
+const nameInput = document.getElementById("playerNameInput");
+
+const statusEl = document.getElementById('status');
+const flagsEl = document.getElementById('flags');
+const handEl = document.getElementById('hand');
+const deckInfoEl = document.getElementById('deckInfo');
+const undoBtn = document.getElementById("undoBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+/* -------------------------
+   名前送信
+------------------------- */
+startBtn.addEventListener("click", () => {
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert("名前を入力してください");
+    return;
+  }
+
+  myName = name;
+
+  ws.send(JSON.stringify({
+    type: "setName",
+    name: myName,
+    role: selectedRole
+  }));
+
+  nameInputArea.style.display = "none";
+  gameArea.style.display = "block";
+});
+
+/* -------------------------
+   安全送信
+------------------------- */
+function safeSend(data) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify(data));
+}
+
+/* -------------------------
+   色
 ------------------------- */
 function cardColorStyle(c) {
   const map = {
@@ -121,208 +151,167 @@ function cardColorStyle(c) {
 ------------------------- */
 function render() {
   if (!state || !me) return;
-     const myDisplayName = state.playerNames[me];
-     const opponent = me === "P1" ? "P2" : "P1";
-     const opponentName = state.playerNames[opponent];
-  /* -------------------------
-     勝敗ポップアップ
-  ------------------------- */
-if (state.winner) {
-  statusEl.textContent = `勝者: ${state.winner}（リセットするまで盤面を確認できます）`;
-}
+
+  const myDisplayName = state.playerNames[me];
+  const opponent = me === "P1" ? "P2" : "P1";
+  const opponentName = state.playerNames[opponent];
+
+  // ステータス
+  if (state.winner) {
+    statusEl.textContent = `勝者: ${state.playerNames[state.winner]}`;
+  } else {
+    if (me === "spectator") {
+      statusEl.textContent = "観戦中";
+    } else {
+      statusEl.textContent =
+        `${myDisplayName} vs ${opponentName} / 手番: ${state.playerNames[state.currentPlayer]}`;
+    }
+  }
 
   deckInfoEl.textContent = `山札: ${state.deck.length}枚`;
 
-if (state.winner) {
-  statusEl.textContent = `勝者: ${state.playerNames[state.winner]}`;
-} else {
-  if (me === "spectator") {
-    statusEl.textContent = "観戦中";
-  } else {
-    statusEl.textContent =
-      `${myDisplayName} vs ${opponentName} / 手番: ${state.playerNames[state.currentPlayer]}`;
-  }
-}
-
-  /* -------------------------
-     フラッグ描画
-------------------------- */
+  /* フラッグ */
   flagsEl.innerHTML = '';
 
-state.flags.forEach(flag => {
-  const div = document.createElement('div');
-  div.className = 'flag';
+  state.flags.forEach(flag => {
+    const div = document.createElement('div');
+    div.className = 'flag';
 
-  if (flag.winner === 'P1') div.classList.add('wP1');
-  if (flag.winner === 'P2') div.classList.add('wP2');
+    if (flag.winner === 'P1') div.classList.add('wP1');
+    if (flag.winner === 'P2') div.classList.add('wP2');
 
-  // ✅ ヘッダー（番号＋勝者）
-  const header = document.createElement('div');
-  header.className = 'flag-header';
+    const header = document.createElement('div');
+    header.className = 'flag-header';
 
-  let text = flag.id; // ←番号だけ
+    let text = flag.id;
+    if (flag.winner) {
+      const name = state.playerNames[flag.winner];
+      const mark = flag.winner === "P1" ? "🟢" : "🔴";
+      text += ` ${mark} ${name}`;
+    }
 
-  if (flag.winner) {
-    const name = state.playerNames[flag.winner] || flag.winner;
-    const mark = flag.winner === "P1" ? "🟢" : "🔴";
-    text += ` ${mark} ${name}`;
-  }
+    header.textContent = text;
+    div.appendChild(header);
 
-  header.textContent = text;
-  div.appendChild(header);
+    function drawPile(cards) {
+      const pile = document.createElement('div');
+      pile.className = 'pile';
 
-  // P1 pile
-  const p1 = document.createElement('div');
-  p1.className = 'pile';
-  flag.cardsP1.forEach(c => {
-    const el = document.createElement('span');
-    el.className = 'card';
-    el.textContent = `${c.number}`;
-    el.style.background = cardColorStyle(c.color);
-    if (flag.lastCardId === c.id) el.classList.add('last');
-    p1.appendChild(el);
-  });
-  div.appendChild(p1);
+      cards.forEach(c => {
+        const el = document.createElement('span');
+        el.className = 'card';
+        el.textContent = c.number;
+        el.style.background = cardColorStyle(c.color);
+        if (flag.lastCardId === c.id) el.classList.add('last');
+        pile.appendChild(el);
+      });
 
-  // P2 pile
-  const p2 = document.createElement('div');
-  p2.className = 'pile';
-  flag.cardsP2.forEach(c => {
-    const el = document.createElement('span');
-    el.className = 'card';
-    el.textContent = `${c.number}`;
-    el.style.background = cardColorStyle(c.color);
-    if (flag.lastCardId === c.id) el.classList.add('last');
-    p2.appendChild(el);
-  });
-  div.appendChild(p2);
+      return pile;
+    }
 
-  // 証明ボタン
-  const proveBtn = document.createElement('button');
-  proveBtn.textContent = "証明";
+    div.appendChild(drawPile(flag.cardsP1));
+    div.appendChild(drawPile(flag.cardsP2));
 
-  const myCards = me === "P1" ? flag.cardsP1 : flag.cardsP2;
-  const canProve =
-    me !== "spectator" &&
-    !flag.winner &&
-    myCards.length === 3;
+    // 証明
+    const proveBtn = document.createElement('button');
+    proveBtn.textContent = "証明";
 
-  proveBtn.disabled = !canProve;
+    const myCards = me === "P1" ? flag.cardsP1 : flag.cardsP2;
 
-  proveBtn.addEventListener('click', () => {
-    if (!canProve) return;
-    ws.send(JSON.stringify({
-      type: 'prove',
-      playerId: me,
-      flagId: flag.id
-    }));
-  });
+    proveBtn.disabled =
+      me === "spectator" ||
+      flag.winner ||
+      myCards.length !== 3;
 
-  div.appendChild(proveBtn);
-
-  // カード置く
-  if (!flag.winner && state.currentPlayer === me && me !== "spectator") {
-    div.addEventListener('click', () => {
-      if (selectedCardId == null) return;
-
-      ws.send(JSON.stringify({
-        type: 'playCard',
+    proveBtn.onclick = () => {
+      safeSend({
+        type: 'prove',
         playerId: me,
-        cardId: selectedCardId,
         flagId: flag.id
-      }));
+      });
+    };
 
-      selectedCardId = null;
-      render();
-    });
-  }
+    div.appendChild(proveBtn);
 
-  flagsEl.appendChild(div);
-});
+    // カード置く
+    if (!flag.winner && state.currentPlayer === me && me !== "spectator") {
+      div.onclick = () => {
+        if (selectedCardId == null) return;
 
-  /* -------------------------
-     手札描画
-------------------------- */
+        safeSend({
+          type: 'playCard',
+          playerId: me,
+          cardId: selectedCardId,
+          flagId: flag.id
+        });
+
+        selectedCardId = null;
+      };
+    }
+
+    flagsEl.appendChild(div);
+  });
+
+  /* 手札 */
   handEl.innerHTML = '';
 
   if (me === "spectator") {
     handEl.style.display = "none";
     return;
-  } else {
-    handEl.style.display = "flex";
   }
 
-  const myHand = state.hands[me];
+  handEl.style.display = "flex";
 
-  myHand.forEach(c => {
+  state.hands[me].forEach(c => {
     const el = document.createElement('span');
     el.className = 'card';
-    el.textContent = `${c.number}`;
+    el.textContent = c.number;
     el.style.background = cardColorStyle(c.color);
-    el.dataset.id = c.id;
 
     if (selectedCardId === c.id) {
       el.classList.add('selected');
     }
 
-    el.addEventListener('click', () => {
+    el.onclick = () => {
       selectedCardId = c.id;
       render();
-    });
+    };
 
     handEl.appendChild(el);
   });
-  
-  // 👇ここに入れる
-  if (me === "spectator") {
-    undoBtn.disabled = true;
-    resetBtn.disabled = true;
-  } else {
-    undoBtn.disabled = false;
-    resetBtn.disabled = false;
-  }
-  
-  
-  // 🔊 ここに追加
+
+  // ボタン制御
+  undoBtn.disabled = (me === "spectator");
+  resetBtn.disabled = (me === "spectator");
+
+  // ターン音
   if (state.currentPlayer === me && prevPlayer !== me) {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-    osc.type = "sine";
-    osc.frequency.value = 800;
+      osc.frequency.value = 800;
+      gain.gain.value = 0.1;
 
-    gain.gain.value = 0.1;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.15);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } catch {}
   }
 
-    prevPlayer = state.currentPlayer;
-    
-  }
-
-function sendUndo() {
-  ws.send(JSON.stringify({
-    type: 'undo'
-  }));
+  prevPlayer = state.currentPlayer;
 }
 
-window.addEventListener("load", () => {
-  const btn = document.getElementById("resetBtn");
-  if (btn) {
-    btn.addEventListener("click", () => {
-      ws.send(JSON.stringify({
-  type: 'reset'
-}));
-    });
-  }
-});
+/* -------------------------
+   ボタン
+------------------------- */
+undoBtn.onclick = () => {
+  safeSend({ type: 'undo' });
+};
 
-document.getElementById("undoBtn").addEventListener("click", () => {
-  sendUndo();
-});
-
+resetBtn.onclick = () => {
+  safeSend({ type: 'reset' });
+};
