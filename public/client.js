@@ -70,7 +70,16 @@ function connect() {
   ws = new WebSocket(url);
 
   ws.onopen = () => {
-    statusEl.textContent = "サーバーに接続しました。名前を入力してください。";
+     statusEl.textContent = "接続しました";
+
+  // ★ここ追加（超重要）
+  if (myName) {
+    ws.send(JSON.stringify({
+      type: "setName",
+      name: myName,
+      role: selectedRole
+    }));
+  }
   };
 
   ws.onmessage = (ev) => {
@@ -97,9 +106,12 @@ function connect() {
   };
 
   ws.onclose = () => {
-    statusEl.textContent = '切断されました。';
-  };
-}
+  statusEl.textContent = '再接続中...';
+
+  setTimeout(() => {
+    connect();
+  }, 1000);
+};
 
 /* -------------------------
    カード色
