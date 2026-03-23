@@ -535,7 +535,7 @@ if (data.type === 'reset') {
   ------------------------- */
     ws.on('close', (code, reason) => {
       console.log('切断されました', code, reason.toString());
-    });
+    
 
     // クライアント削除
     const index = clients.findIndex(c => c.ws === ws);
@@ -553,7 +553,6 @@ if (data.type === 'reset') {
       gameState = createInitialGameState();
       history = [];
 
-      return;
     }
   });
 
