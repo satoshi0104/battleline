@@ -18,6 +18,7 @@ function heartbeat() {
 
 
 // ★ここに追加（connectionの外！）
+/*
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.readyState !== WebSocket.OPEN) return;
@@ -35,6 +36,7 @@ const interval = setInterval(() => {
     } catch (e) {}
   });
 }, 30000);
+*/
 
 app.use(express.static(path.join(__dirname, 'public')));
 
