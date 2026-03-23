@@ -20,13 +20,19 @@ function heartbeat() {
 // ★ここに追加（connectionの外！）
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
+    if (ws.readyState !== WebSocket.OPEN) return;
+
+    // タイムアウト検出だけやる
     if (ws.isAlive === false) {
       console.log("タイムアウト切断");
       return ws.terminate();
     }
 
     ws.isAlive = false;
-    ws.ping();
+
+    try {
+      ws.ping();
+    } catch (e) {}
   });
 }, 30000);
 
