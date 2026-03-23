@@ -14,6 +14,9 @@ function heartbeat() {
   this.isAlive = true;
 }
 
+
+
+
 // ★ここに追加（connectionの外！）
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
@@ -390,25 +393,6 @@ if (data.type === 'reset') {
   return;
 }
 
-
-
-    /* -------------------------
-       setName
-    ------------------------- */
-    if (data.type === "setName") {
-      sender.name = data.name;
-
-      if (sender.role === "P1" || sender.role === "P2") {
-        if (gameState) {
-          gameState.playerNames[sender.role] = sender.name;
-          broadcastState();
-        } else {
-          tryStartGame();
-        }
-      }
-      return;
-    }
-
     if (!gameState) return;
     if (sender.role === "spectator") return;
 
@@ -551,4 +535,9 @@ if (data.type === 'reset') {
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log("Server running on http://0.0.0.0:" + PORT);
+});
+
+// ★これ追加
+wss.on('close', () => {
+  clearInterval(interval);
 });
