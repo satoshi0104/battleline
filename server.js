@@ -1,4 +1,13 @@
 // server.js
+
+process.on('uncaughtException', (err) => {
+  console.log('例外クラッシュ:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.log('Promiseエラー:', err);
+});
+
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -8,6 +17,11 @@ const app = express();
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+
+
+wss.on('error', (err) => {
+  console.log('WSSサーバーエラー:', err.message);
+});
 
 function heartbeat() {
   this.isAlive = true;
@@ -314,6 +328,11 @@ function tryStartGame() {
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', heartbeat);
+   // ★ここに追加
+  ws.on('error', (err) => {
+    console.log('WSエラー:', err.message);
+  });
+  
 
   let role = "spectator"; // 最初は仮
 
@@ -328,6 +347,8 @@ wss.on('connection', (ws) => {
     let data;
     try { data = JSON.parse(msg); }
     catch { return; }
+
+    if (data.type === "ping") return;
 
     const sender = clients.find(c => c.ws === ws);
     if (!sender) return;
@@ -512,8 +533,9 @@ if (data.type === 'reset') {
   /* -------------------------
      切断
   ------------------------- */
-  ws.on('close', () => {
-    console.log('切断されました');
+    ws.on('close', (code, reason) => {
+      console.log('切断されました', code, reason.toString());
+    });
 
     // クライアント削除
     const index = clients.findIndex(c => c.ws === ws);
