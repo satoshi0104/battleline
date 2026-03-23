@@ -4,6 +4,7 @@ let state = null;
 let myName = "";
 let selectedCardId = null;
 let selectedRole = "spectator";
+let pingInterval = null;
 
 let prevPlayer = null;
 let reconnecting = false;
@@ -29,7 +30,18 @@ function connect() {
         role: selectedRole
       }));
     }
-  };
+
+  // ★既存停止
+  if (pingInterval) clearInterval(pingInterval);
+
+  // ★新しく開始
+  pingInterval = setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "ping" }));
+    }
+  }, 20000);
+};
+
 
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
