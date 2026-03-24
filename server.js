@@ -12,6 +12,8 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
+const fs = require('fs');
+const SAVE_FILE = './game.json';
 
 const app = express();
 
@@ -22,6 +24,27 @@ const wss = new WebSocket.Server({ server });
 wss.on('error', (err) => {
   console.log('WSSサーバーエラー:', err.message);
 });
+
+function loadGame() {
+  try {
+    if (fs.existsSync(SAVE_FILE)) {
+      const data = fs.readFileSync(SAVE_FILE, 'utf-8');
+      gameState = JSON.parse(data);
+      console.log("ゲーム復元成功");
+    }
+  } catch (e) {
+    console.log("復元失敗:", e);
+  }
+}
+
+function saveGame() {
+  try {
+    fs.writeFileSync(SAVE_FILE, JSON.stringify(gameState));
+  } catch (e) {
+    console.log("保存失敗:", e);
+  }
+}
+
 
 function heartbeat() {
   this.isAlive = true;
@@ -395,6 +418,7 @@ wss.on('connection', (ws) => {
 
     gameState = history.pop();
     broadcastState();
+    saveGame();
     return;
   }
 
@@ -415,6 +439,7 @@ if (data.type === 'reset') {
   // 履歴もリセット（undo対策）
   history = [];
   broadcastState();
+  saveGame();
   return;
 }
 
@@ -481,6 +506,7 @@ if (data.type === 'reset') {
       }
 
       broadcastState();
+      saveGame();
       return;
     }
 
@@ -524,6 +550,7 @@ if (data.type === 'reset') {
       }
 
       broadcastState();
+      saveGame();
       return;
     }
   });
@@ -552,11 +579,14 @@ if (data.type === 'reset') {
 
       gameState = createInitialGameState();
       history = [];
+      saveGame();
 
     }
   });
 
 });
+
+loadGame();
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
