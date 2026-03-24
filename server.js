@@ -577,9 +577,9 @@ if (data.type === 'reset') {
     if (!hasP1 && !hasP2) {
       console.log("全プレイヤー切断 → 自動リセット");
 
-      gameState = createInitialGameState();
-      history = [];
-      saveGame();
+      /gameState = createInitialGameState();
+      /history = [];
+      /saveGame();
 
     }
   });
