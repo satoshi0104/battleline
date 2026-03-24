@@ -1,4 +1,3 @@
-```js
 // ===== server.js（完全安定＋復元版） =====
 
 process.on('uncaughtException', (err) => {
@@ -258,4 +257,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("Server running");
 });
-```
