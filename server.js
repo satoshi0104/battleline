@@ -1,50 +1,14 @@
 // server.js
-
-process.on('uncaughtException', (err) => {
-  console.log('例外クラッシュ:', err);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.log('Promiseエラー:', err);
-});
-
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
-const fs = require('fs');
-const SAVE_FILE = './game.json';
 
 const app = express();
+app.use(express.static("public"));
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-
-
-wss.on('error', (err) => {
-  console.log('WSSサーバーエラー:', err.message);
-});
-
-function loadGame() {
-  try {
-    if (fs.existsSync(SAVE_FILE)) {
-      const data = fs.readFileSync(SAVE_FILE, 'utf-8');
-      gameState = JSON.parse(data);
-      console.log("ゲーム復元成功");
-    }
-  } catch (e) {
-    console.log("復元失敗:", e);
-  }
-}
-
-function saveGame() {
-  try {
-    fs.writeFileSync(SAVE_FILE, JSON.stringify(gameState));
-  } catch (e) {
-    console.log("保存失敗:", e);
-  }
-}
-
 
 function heartbeat() {
   this.isAlive = true;
@@ -53,21 +17,13 @@ function heartbeat() {
 // ★ここに追加（connectionの外！）
 const interval = setInterval(() => {
   wss.clients.forEach((ws) => {
-    if (ws.readyState !== WebSocket.OPEN) return;
-
     if (ws.isAlive === false) {
       console.log("タイムアウト切断");
-      ws.terminate();
-      return;
+      return ws.terminate();
     }
 
     ws.isAlive = false;
-
-    try {
-      ws.ping();
-    } catch (e) {
-      console.log("ping error:", e);
-    }
+    ws.ping();
   });
 }, 30000);
 
@@ -351,11 +307,6 @@ function tryStartGame() {
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', heartbeat);
-   // ★ここに追加
-  ws.on('error', (err) => {
-    console.log('WSエラー:', err.message);
-  });
-  
 
   let role = "spectator"; // 最初は仮
 
@@ -370,8 +321,6 @@ wss.on('connection', (ws) => {
     let data;
     try { data = JSON.parse(msg); }
     catch { return; }
-
-    if (data.type === "ping") return;
 
     const sender = clients.find(c => c.ws === ws);
     if (!sender) return;
@@ -418,7 +367,6 @@ wss.on('connection', (ws) => {
 
     gameState = history.pop();
     broadcastState();
-    saveGame();
     return;
   }
 
@@ -439,9 +387,27 @@ if (data.type === 'reset') {
   // 履歴もリセット（undo対策）
   history = [];
   broadcastState();
-  saveGame();
   return;
 }
+
+
+
+    /* -------------------------
+       setName
+    ------------------------- */
+    if (data.type === "setName") {
+      sender.name = data.name;
+
+      if (sender.role === "P1" || sender.role === "P2") {
+        if (gameState) {
+          gameState.playerNames[sender.role] = sender.name;
+          broadcastState();
+        } else {
+          tryStartGame();
+        }
+      }
+      return;
+    }
 
     if (!gameState) return;
     if (sender.role === "spectator") return;
@@ -454,7 +420,6 @@ if (data.type === 'reset') {
        
       if (gameState.winner) return;
       history.push(cloneState(gameState));
-      if (history.length > 50) history.shift();
       
       const { playerId, cardId, flagId } = data;
 
@@ -506,7 +471,6 @@ if (data.type === 'reset') {
       }
 
       broadcastState();
-      saveGame();
       return;
     }
 
@@ -550,7 +514,6 @@ if (data.type === 'reset') {
       }
 
       broadcastState();
-      saveGame();
       return;
     }
   });
@@ -560,9 +523,8 @@ if (data.type === 'reset') {
   /* -------------------------
      切断
   ------------------------- */
-    ws.on('close', (code, reason) => {
-      console.log('切断されました', code, reason.toString());
-    
+  ws.on('close', () => {
+    console.log('切断されました');
 
     // クライアント削除
     const index = clients.findIndex(c => c.ws === ws);
@@ -577,18 +539,16 @@ if (data.type === 'reset') {
     if (!hasP1 && !hasP2) {
       console.log("全プレイヤー切断 → 自動リセット");
 
-      // gameState = createInitialGameState();
-      // history = [];
-      // saveGame();
+      gameState = createInitialGameState();
+      history = [];
 
+      return;
     }
   });
 
 });
 
-loadGame();
-
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 server.listen(PORT, () => {
-  console.log("Server running");
+  console.log("Server running on http://0.0.0.0:" + PORT);
 });
